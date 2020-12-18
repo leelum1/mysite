@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% block head %}
+  <title>Contact</title>
+  <meta name="description" content="Contact page for kevanleelum.com">
+  {# Full jquery is needed for ajax #}
+  <script src="https://code.jquery.com/jquery-3.5.1.js" integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc=" crossorigin="anonymous"></script>
+  <style media="screen">
+    #main{
+      background-image: url("{% static 'images/topography.png' %}");
+      padding-bottom: 30px;
+    }
+
+    form .btn{
+      margin-top: 20px;
+    }
+
+    .contact{
+      border-radius: 5px;
+      max-width: 800px;
+      padding-top: 20px;
+      padding-bottom: 20px;
+    }
+
+    footer{
+      margin-top: 0px;
+    }
+  </style>
+{% endblock head %}
+{% block body_block %}
+  <section id="main">
+    <div class="container-fluid contact">
+      <h1 class="mb-3">Contact Me</h1>
+      <p>If you have any questions or comments about anything found on this website,
+        please fill out the form below. Messages considered to be spam will be ignored.</p>
+
+      <form class="contact-form" action="{% url 'contact' %}" method="post" next-url="{% url 'index' %}">
+        {% csrf_token %}
+        <div class="form-group">
+          {% for field in form %}
+            <div class="fieldWrapper">
+              {{ field.errors }}
+              {{ field.label_tag }}
+              {% render_field field class="form-control" %}
+              {% if field.help_text %}
+              <p class="help">{{ field.help_text|safe }}</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="g-recaptcha" data-sitekey="6LfwgLYZAAAAABxHG1bDKPA_OiUiNlER6eN2ZnVP" data-callback="recaptchaEnable"></div>
+        <input id="submit-button" class="btn btn-primary" type="submit" value="Send Message">
+      </form>
+    </div>
+  </section>
+{% endblock body_block %}
+{% block javascript %}
+  <script src='https://www.google.com/recaptcha/api.js'></script>
+
+  <script type="text/javascript">
+    $(document).ready(function(){
+      document.getElementById("submit-button").disabled = true;
+    });
+
+    function recaptchaEnable(){
+      document.getElementById("submit-button").disabled = false;
+    }
+  </script>
+
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function(){
+      var contactForm = $(".contact-form");
+      var contactFormMethod = contactForm.attr("method");
+      var contactFormEndpoint = contactForm.attr("action");
+      var nextURL = contactForm.attr("next-url");
+      contactForm.submit(function(event){
+        event.preventDefault()
+        var contactFormData = contactForm.serialize()
+        $.ajax({
+          method: contactFormMethod,
+          url: contactFormEndpoint,
+          data: contactFormData,
+          success: function(data){
+            swal({
+              title: "Message Received!",
+              text: data.message,
+              icon: "success",
+            }).then((value) => {
+              window.location.href = nextURL;
+            });
+          },
+          error: function(error){
+            console.log(error);
+            alert("An error occurred, please try again")
+            window.location.reload()
+          }
+        });
+      });
+    });
+  </script>
+{% endblock javascript %}

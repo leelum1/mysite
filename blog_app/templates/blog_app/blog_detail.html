@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% load static %}
+{% load md2 %}
+{% block head %}
+  <title>{{ post.title }}</title>
+  <meta name="description" content="">
+  <style media="screen">
+    h1{
+      font-weight: bolder;
+      text-align: left;
+    }
+
+    .date{
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .cover-wrapper{
+      margin: 20px;
+    }
+
+    .caption{
+      text-align: center;
+      font-style: italic;
+      margin-top: 10px;
+    }
+
+    {% if post.cover %}
+      #cover{
+        background-image: url({{ post.cover.url }});
+        background-position: center;
+        background-size: cover;
+        height: 500px;
+      }
+    {% endif %}
+
+    .post-text img{
+      max-height: 500px;
+      max-width: 500px;
+      display: block;
+      margin: auto;
+      padding-bottom: 30px;
+    }
+
+    .sidebar{
+      height: 100%;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .post-link{
+      color: black;
+    }
+
+    .related-post{
+      margin-bottom: 40px;
+    }
+
+    .related-post-cover{
+      background-position: center;
+      background-size: cover;
+      height: 200px;
+    }
+
+    .image-link:hover{
+      cursor: pointer;
+    }
+
+    .gallery-img-wrapper{
+      margin-top: 50px;
+      text-align: center;
+    }
+
+    .image-caption{
+      background-color:black;
+      color:white;
+      display: block;
+      padding:30px;
+      position:fixed;
+      bottom:0;
+      text-align: center;
+      width:100vw;
+    }
+
+    .greyscale{
+      background-color: grey;
+      height: 100%;
+      opacity: 90%;
+      position: fixed;
+      top: 0;
+      width: 100vw;
+    }
+
+    #gallery{
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      width: 100vw;
+      z-index: 99;
+    }
+
+    #close-icon:hover{
+      cursor: pointer;
+    }
+  </style>
+{% endblock head %}
+{% block body_block %}
+  <header>
+    <div class="container-fluid">
+      <h1 class="display-4 my-2"><strong>{{ post.title }}</strong></h1>
+      <p class="date">Updated: {{ post.date_updated }}</p>
+    </div>
+  </header>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-8 col-md-12" style="border-top:1px solid grey;">
+        {% if post.cover %}
+          <div class="cover-wrapper">
+            <div id="cover" title="{{ post.cover_caption }}"></div>
+            <p class="caption">{{ post.cover_caption}}</p>
+          </div>
+        {% endif %}
+        <div class="post-text">
+          {{ post.text|markdown }}
+        </div>
+        <div class="mt-5">
+          {% for image in images  %}
+            <a class="image-link" onclick="showGallery({{ image.id }})">
+              <img src="{{ image.image.url }}" title="{{ image.caption }}" height="300" alt="{{ image.blog.title }}">
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-12">
+        <div class="sidebar">
+          {% for post in posts %}
+            <a class="post-link" href="{% url 'blog_app:detail' slug=post.slug %}">
+              <div class="related-post">
+                {% if post.cover %}
+                  <div class="related-post-cover" style="background-image: url({{ post.cover.url }});"></div>
+                {% endif %}
+                <h4 class="my-2">{{ post.title }}</h4>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <a href="{% url 'blog_app:list' %}">Blog Home</a>
+    {% if user.is_superuser %}
+      <a class="btn btn-warning" href="{% url 'blog_app:update' slug=post.slug %}">Update Post</a>
+    {% endif %}
+  </div>
+
+  <div id="gallery-wrapper" onclick="hideGallery()">
+    <div class="greyscale"></div>
+    <div class="" id="gallery">
+      <a id="close-icon" style="position:fixed;right:10px;top:10px;" onclick="hideGallery()">
+        <svg aria-hidden="true" height=50 focusable="false" data-prefix="far" data-icon="window-close" class="svg-inline--fa fa-window-close fa-w-16" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M464 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h416c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zm0 394c0 3.3-2.7 6-6 6H54c-3.3 0-6-2.7-6-6V86c0-3.3 2.7-6 6-6h404c3.3 0 6 2.7 6 6v340zM356.5 194.6L295.1 256l61.4 61.4c4.6 4.6 4.6 12.1 0 16.8l-22.3 22.3c-4.6 4.6-12.1 4.6-16.8 0L256 295.1l-61.4 61.4c-4.6 4.6-12.1 4.6-16.8 0l-22.3-22.3c-4.6-4.6-4.6-12.1 0-16.8l61.4-61.4-61.4-61.4c-4.6-4.6-4.6-12.1 0-16.8l22.3-22.3c4.6-4.6 12.1-4.6 16.8 0l61.4 61.4 61.4-61.4c4.6-4.6 12.1-4.6 16.8 0l22.3 22.3c4.7 4.6 4.7 12.1 0 16.8z"></path></svg>
+      </a>
+      <div class="gallery-img-wrapper">
+        <img id="gallery-img" style="max-height:80vh;">
+      </div>
+      <span class="image-caption"></span>
+    </div>
+  </div>
+{% endblock body_block %}
+
+{% block javascript %}
+  <script type="text/javascript">
+    $(document).ready(function(){
+      $('#gallery-wrapper').hide();
+
+      let img_ids = [];
+      {% for image in images %}
+        img_ids.push({{image.id}});
+      {% endfor %}
+      console.log(img_ids);
+    });
+
+    function showGallery(imageid){
+      $('#gallery-wrapper').show();
+
+      {% for image in images %}
+        if ({{image.id}} == imageid) {
+          $('#gallery-img').attr('src','{{ image.image.url }}')
+          $('.image-caption').html('{{ image.caption }}');
+        }
+      {% endfor %}
+    };
+
+    function hideGallery() {
+      $('#gallery-wrapper').hide();
+    };
+  </script>
+{% endblock %}

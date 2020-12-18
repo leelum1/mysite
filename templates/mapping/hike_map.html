@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block head %}
+  <meta name="author" content="Kevan Lee Lum">
+  <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+  <title>Hiking in Trinidad and Tobago Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+  <style media="screen">
+    #map{
+      height: 90vh;
+      width: 100%;
+      margin: auto;
+    }
+
+    .my-div-icon{
+      min-height: 20px;
+      min-width: 50px;
+    }
+
+    .hike-icon{
+      color: black;
+      white-space: nowrap;
+    }
+
+    .leaflet-popup-content{
+      text-align: center;
+      min-width: 200px;
+    }
+
+    .hike-popup-title{
+      font-weight: bold;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .hike-detail-link{
+      font-size: 12px;
+    }
+
+    #sidebar{
+      height:90vh;
+      overflow-y:scroll;
+    }
+
+    #hikesList{
+
+    }
+
+    .hike{
+      box-shadow: 0 1px 4px 0 rgba(12, 12, 13, 0.1);
+    }
+
+    .hike:hover{
+      box-shadow: 0 1px 4px 5px rgba(12, 12, 13, 0.1);
+      transition: box-shadow 0.3s;
+      cursor: pointer;
+    }
+
+    #detail{
+      height: 90vh;
+      position: absolute;
+      top: 0;
+      overflow-y: scroll;
+      width: 100%;
+    }
+
+    #backgroundimg{
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      height:50vh;
+    }
+
+    #close-icon:hover{
+      cursor: pointer;
+    }
+
+    #mainblock{
+      min-height: 0;
+    }
+
+    footer{
+      margin-top: 0;
+    }
+  </style>
+{% endblock head %}
+{% block body_block %}
+  <section>
+    <div class="row no-gutters">
+      <div class="col-xl-6 col-lg-12">
+        <div id="map"></div>
+      </div>
+      <div class="col-xl-6 col-lg-12">
+        <div class="container-fluid" id="sidebar">
+          <h1 class="mb-3">Hiking in Trinidad and Tobago</h1>
+          <div id="hikesList" class="row no-gutters">
+
+          </div>
+        </div>
+        <div id="detail">
+
+          <div class="container-fluid">
+            <div class="" style="text-align:right;">
+              <a id="close-icon" onclick="hideDetail()">
+                <svg height=15 aria-hidden="true" focusable="false" data-prefix="far" data-icon="window-close" class="svg-inline--fa fa-window-close fa-w-16" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M464 32H48C21.5 32 0 53.5 0 80v352c0 26.5 21.5 48 48 48h416c26.5 0 48-21.5 48-48V80c0-26.5-21.5-48-48-48zm0 394c0 3.3-2.7 6-6 6H54c-3.3 0-6-2.7-6-6V86c0-3.3 2.7-6 6-6h404c3.3 0 6 2.7 6 6v340zM356.5 194.6L295.1 256l61.4 61.4c4.6 4.6 4.6 12.1 0 16.8l-22.3 22.3c-4.6 4.6-12.1 4.6-16.8 0L256 295.1l-61.4 61.4c-4.6 4.6-12.1 4.6-16.8 0l-22.3-22.3c-4.6-4.6-4.6-12.1 0-16.8l61.4-61.4-61.4-61.4c-4.6-4.6-4.6-12.1 0-16.8l22.3-22.3c4.6-4.6 12.1-4.6 16.8 0l61.4 61.4 61.4-61.4c4.6-4.6 12.1-4.6 16.8 0l22.3 22.3c4.7 4.6 4.7 12.1 0 16.8z"></path></svg>
+                close window
+              </a>
+            </div>
+            <div id="backgroundimg"></div>
+            <h2 class="my-3" id="heading"></h2>
+            <div class="row" style="border-bottom:1px solid lightgrey;margin-bottom:10px;">
+              <div class="col">
+                <p>Difficulty: <span id="difficulty"></span></p>
+              </div>
+              <div class="col">
+                <p>Time: <span id="time"></span></p>
+              </div>
+            </div>
+            <p id="description"></p>
+            <p id="directions"><strong>Directions: </strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock body_block %}
+{% block javascript %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.0/showdown.min.js"></script>
+
+  <script src="{% static 'geojson/hikes.js' %}" charset="utf-8"></script>
+
+  <script type="text/javascript">
+    var converter = new showdown.Converter();
+
+    function detail(id){
+      $('#sidebar').hide();
+      for(var i in hikes.features){
+        if (hikes.features[i].properties.id == id) {
+          var hikeimg = hikes.features[i].properties.cover;
+          if (hikeimg==null) {
+            var url_mask = "{% static 'images/no-image-icon.png' %}";
+          }else {
+            var url_mask = "{% static 'hikeimg' %}".replace('hikeimg', hikeimg);
+          };
+          var md = hikes.features[i].properties.description;
+          var showdown = converter.makeHtml(md);
+          $("#backgroundimg").css("background-image", "url("
+          + url_mask + ")");
+          $("#heading").text(hikes.features[i].properties.name);
+          $("#difficulty").text(hikes.features[i].properties.difficulty + " - " + difficulty[hikes.features[i].properties.difficulty]);
+          $("#time").text(hikes.features[i].properties.time);
+          $("#description").html(showdown);
+          $("#detail").show();
+
+          map.flyTo([hikes.features[i].geometry.coordinates[1], hikes.features[i].geometry.coordinates[0]],14);
+          $(".marker-label").show();
+        }
+      }
+      highlight(id);
+    };
+
+    function hideDetail(){
+      $('#detail').hide();
+      $('#sidebar').show();
+    }
+
+    var redIcon = L.icon({
+        iconUrl: '{% static "images/red-marker.png" %}',
+        // shadowUrl: 'leaf-shadow.png',
+
+        iconSize:     [30, 50], // size of the icon
+        // shadowSize:   [50, 64], // size of the shadow
+        iconAnchor:   [15, 50], // point of the icon which will correspond to marker's location
+        // shadowAnchor: [4, 62],  // the same for the shadow
+        // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+    });
+
+    function highlight(id){
+      for(var i in hikes.features){
+        if (hikes.features[i].properties.id == id) {
+          highlightmarker.setLatLng([hikes.features[i].geometry.coordinates[1], hikes.features[i].geometry.coordinates[0]])
+          // marker = new L.marker([hikes.features[i].geometry.coordinates[1], hikes.features[i].geometry.coordinates[0]], {icon: redIcon})
+          //       .addTo(map)
+        }
+      }
+    };
+
+    var map = L.map('map').setView([10.7, -61.4], 10);
+
+    L.control.scale().addTo(map);
+
+    let mapboxAttr = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>';
+    var streets = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+      attribution: mapboxAttr,
+      maxZoom: 18,
+      id: 'mapbox/streets-v11',
+      tileSize: 512,
+      zoomOffset: -1,
+        accessToken: 'pk.eyJ1IjoibGVlbHVtMSIsImEiOiJjamZmb3BzeW4wbXg2MndsOTE5MGM3Nzd3In0.aem1yMDKhuLp0fUGKhxJrg'
+    }).addTo(map);
+
+    var satellite = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+      attribution: mapboxAttr,
+      maxZoom: 18,
+      id: 'mapbox/satellite-streets-v11',
+      tileSize: 512,
+      zoomOffset: -1,
+        accessToken: 'pk.eyJ1IjoibGVlbHVtMSIsImEiOiJjamZmb3BzeW4wbXg2MndsOTE5MGM3Nzd3In0.aem1yMDKhuLp0fUGKhxJrg'
+    });
+
+    var baseMaps = {
+      "Streets": streets,
+      "Satellite": satellite
+    };
+
+    L.control.layers(baseMaps).addTo(map);
+
+    hikes.features.forEach(function(hike) {
+      var hikeimg = hike.properties.cover;
+      var url_mask = "{% static 'hikeimg' %}".replace('hikeimg', hikeimg);
+      var popup_content = "<img class='popup-img' src=" + url_mask + " alt=''>\
+      <p class='hike-popup-title mt-2 mb-1'>" + hike.properties.name + "</p>\
+      <a class='btn btn-primary hike-detail-link' style='color:white;' onclick=detail("+ hike.properties.id +")>More Details</a>";
+
+      marker = new L.marker([hike.geometry.coordinates[1], hike.geometry.coordinates[0]])
+                .addTo(map)
+                .bindPopup(popup_content);
+    });
+
+    hikes.features.forEach(function(hike) {
+      marker = new L.marker([hike.geometry.coordinates[1], hike.geometry.coordinates[0]], {
+        icon: new L.DivIcon({
+          className: 'marker-label',
+          html: '<a><div class="hike-icon">' + hike.properties.name + '</div></a>'
+        })
+      }).addTo(map)
+    });
+
+    let hikesList = $('#hikesList');
+    for(var i in hikes.features){
+      var hikeimg = hikes.features[i].properties.cover;
+      if (hikeimg==null) {
+        var url_mask = "{% static 'images/no-image-icon.png' %}";
+      }else {
+        var url_mask = "{% static 'hikeimg' %}".replace('hikeimg', hikeimg);
+      };
+      var hikeItem  = '<div class="col-lg-12 col-xl-6" onclick="detail('
+      + hikes.features[i].properties.id
+      + ')" style=padding:5px;><div class=hike><div style=background-image:url('
+      + url_mask
+      + ');background-position:center;background-repeat:no-repeat;background-size:cover;height:200px;text-align:center;></div>'
+      + '<div style=padding:5px;><p style=text-align:center;><strong>' + hikes.features[i].properties.name + '</strong></p>'
+      + '</div></div></div>';
+      hikesList.append(hikeItem);
+    }
+
+    let highlightmarker = L.marker([0,0], {icon: redIcon}).addTo(map);
+
+    map.on('zoomend', function() {
+      var zoomlevel = map.getZoom();
+      if (zoomlevel>=12) {
+        $(".marker-label").show();
+      }else {
+        $(".marker-label").hide();
+      }
+    });
+
+    L.Control.ZoomOut = L.Control.extend({
+        onAdd: function(map) {
+            var img = L.DomUtil.create('img');
+            img.src = "{% static 'images/zoomout.png' %}";
+            img.style.width = '25px';
+            L.DomEvent.on(img,'click',function(){
+              map.setView([10.7, -61.4], 10);
+            });
+            return img;
+        },
+
+        onRemove: function(map) {
+            // Nothing to do here
+        }
+    });
+
+    L.control.zoomout = function(opts) {
+      return new L.Control.ZoomOut(opts);
+    }
+
+    L.control.zoomout({ position: 'topleft' }).addTo(map);
+
+    $(document).ready(function(){
+      $("#detail").hide();
+      $(".marker-label").hide();
+    });
+  </script>
+{% endblock %}
